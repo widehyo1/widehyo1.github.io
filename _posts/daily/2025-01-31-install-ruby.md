@@ -1,7 +1,7 @@
 ---
 layout: post
 title: install ruby
-subtitle: install ruby with jvm
+subtitle: install ruby with rvm
 tags: [commandline, ruby]
 comments: true
 author: widehyo
