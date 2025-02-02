@@ -35,12 +35,14 @@ author: widehyo
 현실의 물리세계와 모니터 안의 세계를 잠시 걷어내고 구조에만 주목하자.
 우리는 잘 알고 있는 대상과 그 대상에 대한 매핑이 있다. 이미 잘 알고 있는 구조를 통하여 다른 구조를 파악하는 것은 인류가 아주 잘 하는 종류의 생각이고 우리는 이러한 생각에 매우 익숙하다(ex. [하스스톤의 전설랭크는] 롤로 치면 챌린저 - 잘 알고 있(다고 가정한)롤의 랭크 시스템을 이용하여 잘 모르는 하스스톤의 랭크 시스템을 이해). 우리는 이것을 통해 다른 컨텍스트에서의 구조를 보존 하고 싶어 한다. 그리고 만약 다른 구조(category D, target context)에서의 동작(a_D, f_D :: a_D -> b_D)이 내가 알고 있는 구조(cateogry C, well known context)에서의 동작(a, f :: a -> b)과 어떤의미에서 동일하게 동작하면(there exists a homomorphism) 우리는 그 구조에 대하여 우리가 알고 있는 매핑과 property를 모두 알 수 있다. 이것이 수학의 강력함이고 어떤 구조가 보존된다는 것만 보장되면 우리는 그 구조에 대한 모든 property를 다른 context에서도 그대로 사용할 수 있다.
 
+
+### Maybe Functor, List Functor
+
 내가 알고 있는 Functor중 그나마 이해도가 있는 것은 Maybe와 List이므로 Maybe와 List에서 이것을 확인해보자.
 Int에서의 +와 *에 대해서는 우리는 충분히 알고 있다. 그리고 이 구조를 Maybe에서도 적용하고 싶다.
 
 그러면 Int(물리적 도구로서의 마우스)와 Maybe Int(모니터 안의 마우스포인터)를 어떤 의미에서 동일하다고 생각하고 그것이 말이 되는지 검증하자.
 
-### Maybe Functor, List Functor
 
 먼저 Int를 어떻게 Maybe Int로 볼 것인지를 결정해야 하고, 이것은 매우 직관적이다.
 1 -> Just 1, 2 -> Just 2, ...
@@ -72,7 +74,7 @@ instance Functor Maybe where
     fmap :: (a -> b) -> a -> Maybe a -> Maybe b
     fmap _ Nothing = Nothing
     fmap f Just x = Just (f x)
-    ```
+```
 
 잘 동작: 아래의 Claim1과 Claim2가 성립한다.
 주어진 일반함수 f에 대한 id를 maybe에서의 id인 id_maybe와 일반 값에서의 id로 구분하여 표기하자.
@@ -96,7 +98,7 @@ fmap id와 id_maybe가 Maybe a 타입의 같은 입력일 때 같은 결과를 �
 fmap id Nothing
     = Nothing -- by the definition of fmap, fmap _ Nothing = Nothing
     = id_maybe Nothing -- by the definition of id_maybe
-    ```
+```
 
 2) Just인 경우
 ```hs
@@ -104,7 +106,7 @@ fmap id Just x
     = Just (id x) -- by the definition of fmap
     = Just x -- by the definition of id
     = id_maybe Just x -- by the definition of id_maybe
-    ```
+```
 
 1)과 2)의 첫 번째 식에서 fmap id 부분만 따로 떼어 놓고 보면 마지막 식의 id_maybe와 pointwise하게 같은 함수임을 알 수 있다.
 
@@ -125,7 +127,7 @@ fmap (g . f) Nothing
     = fmap g (fmap f Nothing) -- Nothing = fmap f Nothing
     = fmap g . fmap f Nothing
     = (fmap g . fmap f) Nothing
-    ```
+```
 
 2) Just인 경우
 ```hs
@@ -136,7 +138,7 @@ fmap (g . f) Just x
     = fmap g (fmap f Just x) -- by Just (f x) = fmap f Just x
     = fmap g . fram f Just x -- by the definition of composition, g (f x) = g . f x
     = (fmap g . fram f) Just x
-    ```
+```
 
 1), 2)에 의하여 fmap (g . f)는 fmap g . fmap f 와 pointwise하게 같은 함수이다.
 
@@ -150,7 +152,7 @@ instance Functor List where
     fmap :: (a -> b) -> a -> List a -> List b
     fmap _ Nil = Nil
     fmap f (Cons head tail) = (Cons f head) fmap f tail
-    ```
+```
 
 여기서 tail은 List a 타입이다.
 
@@ -178,7 +180,7 @@ Claim1) fmap id = id_List
 fmap id Nil
     = Nil -- by the definition of fmap, fmap _ Nil = Nil
     = id_List Nil -- by the definition of id_List
-    ```
+```
 
 2) x = Cons head tail인 경우
 Cons head tail은 다음과 같이 쓸 수 있다.
@@ -188,7 +190,7 @@ Cons head (Cons head_1 (Cons head_2 (Cons head_3 ...
 x = Cons head tail
   = Cons x_0 tail
   = Cons x_0 (Cons x_1 (Cons x_2 ...
-  ```
+```
 
 ```hs
 fmap id Cons x_0 tail
@@ -201,7 +203,7 @@ fmap id Cons x_0 tail
     = Cons x_0 (Cons x_1 (Cons x_2 ...
     = x -- 약속한 표기에 의하여
     = id_List x -- by the definition of id_List
-    ```
+```
 
 1), 2)에 의하여 fmap id :: List a -> List a는 id_List :: List a -> List a와 pointwise하게 같다.
 
@@ -238,14 +240,66 @@ fmap g . f Cons x_0 tail
 
 ### Functor: 타입을 받아 타입을 반환하는 함수, boxing, adding context
 
-Maybe에 대하여 생각해보자. Maybe 자체는 concrete한 type이 될 수 없으며, 타입변수 a를 받아 concrete한
-type인 Maybe a를 만든다.
+Maybe에 대하여 생각해보자. Maybe 자체는 concrete한 type이 될 수 없으며, 타입변수 a를 받아 concrete한 type인 Maybe a를 만든다.
 
-이렇게 보면 Maybe는 타입변수 a를 받아 다른 타입 Maybe a를 반환하는 함수이고 함수 시그니처는 다음과 같다
+이렇게 보면 Maybe는 타입변수 a를 받아 다른 타입 Maybe a를 반환하는 함수이고 함수 시그니처는 다음과 같다.
 Maybe :: a -> Maybe a
 
-타입을 타입으로 반환하는 함수가 Functor이며 Functor law라는 것은 이렇게 정의한 context(혹은 boxing)이 원본 대상에 대한 동작을 보존한다고 여기기 위한 조건이다. 따라서 Functor에서 Functor law를 그렇게 중요하게 여기는 이유는 Functor law가 원본 카테고리에 적용된 매핑이 다른 카테고리(context)에서도 내가 원하는(예상하는) 방향으로 동작하는 조건이고 이래야 우리는 우리가 다루는 새로운 context를 백지 상태에서 처음부터 이해하는 노력을 기울이는 대신 기존에 잘 알고 있는 원본에 대한 이해를 활용할 수 있기 때문이다.
+이러한 관점에서 Functor는 원본을 wrapping하는 하나의 방법이라고도 볼 수 있다.
 
+타입을 타입으로 반환하는 함수가 Functor이며 Functor law라는 것은 이렇게 정의한 context(혹은 boxing)이 원본 대상에 대한 동작을 보존한다고 여기기 위한 조건이다.
+
+따라서 Functor에서 Functor law를 그렇게 중요하게 여기는 이유는 Functor law가 원본 카테고리에 적용된 매핑이 다른 카테고리(context)에서도 내가 원하는(예상하는) 방향으로 동작하는 조건이고 이래야 우리는 우리가 다루는 새로운 context를 백지 상태에서 처음부터 이해하는 노력을 기울이는 대신 기존에 잘 알고 있는 원본에 대한 이해를 활용할 수 있기 때문이다.
+
+
+### 그래서, 왜 wrapping하는가?
+
+간단하게 말하면, 원본에서 성립하지 않는 어떤 바람직한 property를 원본 자체를 변경을 허용하지 않는 조건에서 만족시키게 하기 위해 해당 property를 만족하면서 원본처럼 동작하는 type을 만들기 위함이다.
+
+말이 조금 어려운데, 원본은 내가 원하는 형태로 동작하지 않으니, 내가 원하는 형태로 동작하지만 원본을 흉내내는 타입을 만들어 그 타입을 통해 원본을 추정하겠다는 것이다.
+
+간단한 예를 들어보자면, 예외처리가 있다. 함수형 언어에서는 주어진 데이터에 대하여 여러 함수를 연속적으로 적용하여 원하는 형태로 가공하거나 결과를 생성한다.
+그러나, 적용하는 일련의 함수 중 예외가 발생할 수 있는 함수가 존재한다면 어떨까?
+
+연속적으로 적용되던 함수가 예외를 만나면 그 뒤의 적용되는 함수는 실행도 되지 않고 바로 Error가 raise 될 것이다.
+
+이것은 함수형 사고에서 가장 피해야 할 상황 중에 하나이다.
+이를 해결하기 위한 방법은 원본을 직접 처리하는 대신 특정 상황을 처리하기 위해 wrapping한 타입(객체)에 대하여 함수를 적용하는 것이다.
+
+```hs
+data MaybeResult res = Error | Result res
+```
+
+원본 데이터 대신 원본 데이터를 MaybeResult로 wrapping한 데이터에 대하여 함수를 연속적으로 적용하고, 예외 발생시 Error를 반환하도록 하자.
+
+아래와 같이 처리하면 일련의 함수를 적용하면서도 예외가 발생하지 않도록 처리할 수 있다.
+아이디어는 간단한데, 예외 발생시 Exception을 throw하는 것이 아니라, Error객체를 반환하고 이후 적용되는 일련의 함수는 모두 Error를 그대로 반환하도록 하는 것이다.
+
+예외가 객체로 감싸져 표면에 드러나지 않기 때문에 safe하게 일련의 함수를 적용할 수 있다.
+
+```hs
+f :: MaybeResult -> MaybeResult
+f Error = Error
+f Result res = Result (f res)
+```
+
+혹은 여기서 더 나아가서, 다음과 같은 객체로 wrapping하면 예외 발생여부 뿐 아니라 예외 발생시 에러 메시지에 대한 정보를 추가적으로 줄 수도 있다.
+
+```hs
+data Either a b = Left a | Right b
+-- or
+data EitherResult errMsg res = Error errMsg | Result res
+```
+
+이때 적용되는 일련의 함수는 다음과 같다.
+
+```hs
+f :: EitherResult -> EitherResult
+f Error errMsg = Error errMsg
+f Result res = Result (f res)
+```
+
+위의 예시는 원하는 property로 일련된 함수의 적용에 대한 safety를 채택한 예시이며, 이 외에도 원본에 대한 다른 property를 추가하기 위해서는 그에 따른 적절한 type을 생성하여 처리하면 된다.
 
 출처:
 [[번역] 프로그래머를 위한 카테고리 이론 - 7. 펑터](https://evan-moon.github.io/2024/03/15/category-theory-for-programmers-7-functors/)
