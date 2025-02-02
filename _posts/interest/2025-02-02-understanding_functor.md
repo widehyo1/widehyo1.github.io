@@ -243,7 +243,7 @@ fmap g . f Cons x_0 tail
 Maybe에 대하여 생각해보자. Maybe 자체는 concrete한 type이 될 수 없으며, 타입변수 a를 받아 concrete한 type인 Maybe a를 만든다.
 
 이렇게 보면 Maybe는 타입변수 a를 받아 다른 타입 Maybe a를 반환하는 함수이고 함수 시그니처는 다음과 같다.
-Maybe :: a -> Maybe a
+Maybe :: a -> Maybe
 
 이러한 관점에서 Functor는 원본을 wrapping하는 하나의 방법이라고도 볼 수 있다.
 
@@ -254,7 +254,7 @@ Maybe :: a -> Maybe a
 
 ### 그래서, 왜 wrapping하는가?
 
-간단하게 말하면, 원본에서 성립하지 않는 어떤 바람직한 property를 원본 자체를 변경을 허용하지 않는 조건에서 만족시키게 하기 위해 해당 property를 만족하면서 원본처럼 동작하는 type을 만들기 위함이다.
+간단하게 말하면, 원본에서 성립하지 않는 어떤 바람직한 property를 원본 자체의 변경이 허용되지 않는 조건에서 만족시키게 하기 위해 해당 property를 만족하면서 원본처럼 동작하는 type을 만들기 위함이다.
 
 말이 조금 어려운데, 원본은 내가 원하는 형태로 동작하지 않으니, 내가 원하는 형태로 동작하지만 원본을 흉내내는 타입을 만들어 그 타입을 통해 원본을 추정하겠다는 것이다.
 
@@ -303,5 +303,6 @@ f Result res = Result (f res)
 
 출처:
 [[번역] 프로그래머를 위한 카테고리 이론 - 7. 펑터](https://evan-moon.github.io/2024/03/15/category-theory-for-programmers-7-functors/)
+
 가장 쉬운 하스켈 책: 느긋하지만, 우아하고 세련된 함수형 언어(원제: Learn You a Haskell for Great Gool!: A Befinner's guide)
 
