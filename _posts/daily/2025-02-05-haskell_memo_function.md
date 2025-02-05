@@ -1,7 +1,7 @@
 ---
 layout: post
 title: 하스켈 기본동작 캐싱은 어떻게 이루어질까
-subtitle: based on a paper: memo function implementation
+subtitle: based on a paper, memo function implementation
 tags: [haskell, garbage_collector, computer_science]
 comments: true
 author: widehyo
