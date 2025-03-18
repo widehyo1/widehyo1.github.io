@@ -8,8 +8,14 @@ author: widehyo
 ---
 
 - vim / cli
-  - vim mannual
+  - vimscript
   - awk
-  - jq
-  - curl
-  - psql
+- algorithm
+  - fuzzy finding
+    - longest common sequence
+    - needleman wunsch algorithm
+    - smith waterman algorithm
+    - BLAST
+- rust
+- kotlin
+

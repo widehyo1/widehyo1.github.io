@@ -1,7 +1,7 @@
 ---
 layout: post
-title: awk를 이용한 컬럼 substitution
-subtitle: arbitrary column substitution using awk
+title: awk script storage
+subtitle: awk script storage
 tags: [commandline, awk]
 comments: true
 author: widehyo
@@ -10,18 +10,31 @@ author: widehyo
 ```
 " ~/.vim/ftplugin/awk.vim
 
-iabbrev \begin; BEGIN {<C-u>}
-iabbrev \end; END {<C-u>}
-iabbrev \for; for (i = 1; i <= NF; i++) {}
-iabbrev \forarr; for (idx in arr) {}
-iabbrev \surr; function surround_str(str, start, end) {return start str end}
-iabbrev \split; split(str, arr, sep)
-iabbrev \strip; function strip(str) {gsub(regex, replace, str)return str}
-iabbrev \join; function join(arr, sep) {acc = arr[1]for (i = 2; i <= length(arr); i++) {acc = acc sep arr[i]}return acc}
+iabbrev <buffer> \begin; BEGIN {<CR><C-u>}
+iabbrev <buffer> \end; END {<CR><C-u>}
+iabbrev <buffer> \for; for (i = 1; i <= NF; i++) {}
+iabbrev <buffer> \forarr; for (idx in arr) {}
+iabbrev <buffer> \printarr; for (idx in arr) {<CR>print "idx: " idx " arr[idx]: " arr[idx]<CR>
+iabbrev <buffer> \striparr; for (idx in arr) {<CR>arr[idx] = strip(arr[idx])<CR>
+iabbrev <buffer> \surr; function surround_str(str, start, end) {<CR>return start str end<CR>
+iabbrev <buffer> \surrd; "\""str"\""
+iabbrev <buffer> \surrq; "'"str"'"
+iabbrev <buffer> \surrp; "("str")"
+iabbrev <buffer> \surrs; "["str"]"
+iabbrev <buffer> \surrb; "<"str">"
+iabbrev <buffer> \surrc; "{"str"}"
+iabbrev <buffer> \split; split(str, arr, sep)
+iabbrev <buffer> \strip; function strip(str) {<CR>gsub(/^\s+\|\s+$/, "", str)<CR>return str<CR>}
+iabbrev <buffer> \join; function join(arr, sep) {<CR>acc = arr[1]<CR>for (i = 2; i <= length(arr); i++) {<CR>acc = acc sep arr[i]<CR>return acc<CR>}
+iabbrev <buffer> \gsub; gsub(regex, replace, str)
+
+setlocal tabstop=2
+setlocal shiftwidth=2
+vnoremap <buffer> gcc :s/^/# /<CR>
 ```
 
+`column_replace.awk`
 ```awk
-# column_replace.awk
 BEGIN {
     FS = "\""
     OFS = "\""
@@ -36,8 +49,8 @@ BEGIN {
 }
 ```
 
+`column_to_pylist.awk`
 ```awk
-# column_to_pylist.awk
 function surround_str(str, start, end) {
     return start str end
 }
@@ -67,8 +80,8 @@ function join(arr, sep) {
 }
 ```
 
+`column_to_tuple.awk`
 ```awk
-# column_to_tuple.awk
 function strip(str) {
     gsub(/^\s+|\s+$/, "", str)
     return str
@@ -92,10 +105,10 @@ BEGIN {
 END {
     print surround_str(join(arr, ","), "(", ")")
 }
-
 ```
+
+`csv_to_insert_sql.awk`
 ```awk
-# csv_to_insert_sql.awk
 function join(arr, sep) {
     acc = arr[1]
     for (i = 2; i <= length(arr); i++) {
@@ -155,8 +168,9 @@ NR == num_lines {
     print "(" row_str ");"
 }
 ```
+
+`csv_to_json.awk`
 ```awk
-# csv_to_json.awk
 function transform(arr, out_arr) {
     count = 1
     for (key in arr) {
@@ -205,14 +219,42 @@ END {
     print "]"
 }
 ```
+
+`git_changed.awk`
 ```awk
-# investigate_column_with_type.awk
+function strip(str) {
+    gsub(/^\s+|\s+$/, "", str)
+    return str
+}
+
+/Changes not staged for commit:/,/Untracked files:/{
+    if ($0 ~ /modified/) {
+        print substr($0,14)
+    }
+}
+/Untracked files:/{
+    uflag = 1
+}
+uflag {
+    lnum++
+    if (lnum >= 3) {
+        print strip($0)
+    }
+    if ($0 ~ /^$/) {
+        exit
+    }
+}
+```
+
+`investigate_column_with_type.awk`
+```awk
 function strip(str) {
     gsub(/^\s+|\s+$/, "", str)
     return str
 }
 BEGIN {
     FS = "|"
+    OFS = "|"
     table_count = 0
     split("", meta_arr, "")
     for (idx in meta_arr) {
@@ -227,7 +269,6 @@ BEGIN {
     split("", table_arr, "")
 }
 NF == 9 && !/Column/{
-    # print $1
     col_count++
     key = meta_arr[table_count]
     table_arr[col_count] = strip($1) ":" strip($2)
@@ -238,12 +279,13 @@ NF == 9 && !/Column/{
 END {
     for (index_ in col_info_arr) {
         split(index_, key_arr, SUBSEP)
-        print "["key_arr[1]"("key_arr[2]")]"col_info_arr[index_]
+        print "["key_arr[1]"("key_arr[2]")]",col_info_arr[index_]
     }
 }
 ```
+
+`investigate_columns.awk`
 ```awk
-# investigate_columns.awk
 function strip(str) {
     gsub(/^\s+|\s+$/, "", str)
     return str
@@ -252,6 +294,11 @@ BEGIN {
     FS = "|"
     table_count = 0
     split("", meta_arr, "")
+    for (idx in meta_arr) {
+        print "idx:",idx,"meta_arr[idx]:",meta_arr[idx]
+    }
+    print length(meta_arr)
+
 }
 /Table/{
     split($0, arr, /\s+/)
@@ -260,7 +307,7 @@ BEGIN {
     col_info_arr[meta_arr[table_count]] = ""
 }
 NF == 9 && !/Column/{
-    col_info_arr[meta_arr[table_count]] = col_info_arr[meta_arr[table_count]] "," strip($1)
+    col_info_arr[meta_arr[table_count]] = col_info_arr[meta_arr[table_count]] "," strip($1) 
 }
 END {
     for (idx in col_info_arr) {
@@ -270,8 +317,10 @@ END {
 }
 
 ```
+
+
+`line_to_arr.awk`
 ```awk
-# line_to_arr.awk
 function strip(str) {
     gsub(/^\s+|\s+$/, "", str)
     return str
@@ -290,8 +339,203 @@ END {
 }
 
 ```
+
+`make_code.awk`
 ```awk
-# tuple_reorder.awk
+function strip(str) {
+    gsub(/^\s+|\s+$/, "", str)
+    return str
+}
+
+BEGIN {
+    RS = ""
+}
+NR == 1{
+    split($0, lines, "\n")
+    for (idx in lines) {
+        lines[idx] = strip(lines[idx])
+        declare[idx] = lines[idx]
+    }
+}
+NR == 2{
+    split($0, lines, "\n")
+    for (idx in lines) {
+        lines[idx] = strip(lines[idx])
+    }
+    for (idx in lines) {
+        split(lines[idx], info_arr, ",")
+        info_arr[5] = strip(info_arr[5])
+        comment[idx] = substr(info_arr[5], 4)
+    }
+}
+NR == 3{
+
+    for (idx in declare) {
+        print declare[idx]
+        print "    '''"
+        print "    " comment[idx], "생성 프로세서"
+        print "    '''"
+        print $0
+        print "\n\n"
+    }
+}
+```
+
+`pycode_work1.awk`
+```awk
+BEGIN {
+    FS = ","
+}
+{
+    for (i = 1; i <= NF; i++) {
+        print $i "_seq_max = max([data[0] for data in " $i "_data]) + 1"
+    }
+}
+```
+
+`pycode_work2.awk`
+```awk
+BEGIN {
+    FS = ","
+}
+{
+    $4 = "'" $4 "'"
+    $5 = "'" $5 "'"
+    $7 = "'" $7 "'"
+    $8 = "True"
+    printf ",("
+    for (i = 1; i <= NF; i++) {
+        printf $i ","
+    }
+    printf ")\n"
+}
+```
+
+`pycode_work3.md`
+```md
+`p1.awk`
+
+function strip(str) {
+    gsub(/^\s+|\s+$/, "", str)
+    return str
+}
+
+BEGIN {
+    RS = ""
+}
+NR == 1{
+    split($0, lines, "\n")
+    for (idx in lines) {
+        lines[idx] = strip(lines[idx])
+    }
+    for (idx in lines) {
+        if (idx == 1) continue
+        split(lines[idx], arr, ",")
+        print arr[3]
+    }
+}
+
+
+`p2.awk`
+
+function strip(str) {
+    gsub(/^\s+|\s+$/, "", str)
+    return str
+}
+
+BEGIN {
+    RS = ""
+}
+NR == 2{
+    split($0, lines, "\n")
+    for (idx in lines) {
+        lines[idx] = strip(lines[idx])
+    }
+    for (idx in lines) {
+        if (idx == 1) continue
+        split(lines[idx], arr, ",")
+        print arr[3]
+    }
+}
+
+
+
+33950  2025-03-17_08:46:02 awk -f p1.awk ~/temp.txt
+33951  2025-03-17_08:46:11 awk -f p1.awk ~/temp.txt  | sort | uniq
+33952  2025-03-17_08:46:27 awk -f p1.awk ~/temp.txt  | sort | uniq > uniq_amddong.txt
+33954  2025-03-17_08:47:27 awk -f p2.awk ~/temp.txt
+33955  2025-03-17_08:47:37 awk -f p2.awk ~/temp.txt  | sort | uniq
+33956  2025-03-17_08:47:54 awk -f p2.awk ~/temp.txt  | sort | uniq > fv_address_unique.txt
+
+```
+
+`python_error_to_gF_format.awk`
+```awk
+BEGIN {
+    FS = "\""
+}
+{
+    split($3, arr, /\s+/)
+    print $2 ":" arr[3]
+}
+```
+
+`skeleton_to_iabbr.awk`
+```awk
+NR == 1 {
+  to = $0
+}
+NR > 1 {
+  to = to "<CR>" $0
+}
+END {
+  print "inoremap \\abbr; " to
+}
+```
+
+`swap_camel_snake.awk`
+```awk
+function snake_to_camel(text, result) {
+  result = ""
+  split(text, arr, "_")
+  for (idx in arr) {
+    result = result toupper(substr(arr[idx], 0, 1)) substr(arr[idx], 2)
+  }
+  result = tolower(substr(result, 0, 1)) substr(result, 2)
+  return result
+}
+function camel_to_snake(text, result) {
+  result = text
+  while (match(result, /[A-Z]/) > 1) {
+    result = substr(result, 0, RSTART - 1) "_" tolower(substr(result, RSTART, 1)) substr(result, RSTART + 1)
+  }
+  return result
+}
+{
+  split("|",arr,$0)
+  gsub(/^_+/, "", arr[0])
+  if (match(arr[0], "_")) {
+    print snake_to_camel(arr[0])
+  } else if (match(arr[0], /[A-Z]/) > 1) {
+    print camel_to_snake(arr[0])
+  } else {
+    print arr[0]
+  }
+}
+```
+
+`target_column_uniq.awk`
+```awk
+BEGIN {
+    FS = ","
+}
+{
+    if (!uniq[$1,$2,$3]++) print $1,$2,$3
+}
+```
+
+`tuple_reorder.awk`
+```awk
 function surround_str(str, start, end) {
     return start str end
 }
@@ -307,5 +551,69 @@ BEGIN {
     print surround_str(target, "(", "),")
 }
 
+
+```
+
+`word_info.awk`
+```awk
+function strip(str) {
+    gsub(/^\s+|\s+$/, "", str)
+    return str
+}
+
+BEGIN {
+    RS = ""
+    FS = ":"
+}
+NR == 1{
+    print NR
+    split($0, lines, "\n")
+    for (idx in lines) {
+        lines[idx] = strip(lines[idx])
+    }
+    for (idx in lines) {
+        split(lines[idx], arr, ":")
+        left_key = strip(arr[1])
+        left_word[left_key] = -1
+    }
+    for (idx in left_word) {
+        print idx, left_word[idx]
+    }
+}
+NR == 2{
+    print NR
+    split($0, lines, "\n")
+    for (idx in lines) {
+        lines[idx] = strip(lines[idx])
+    }
+    for (idx in lines) {
+        split(lines[idx], arr, ":")
+        right_key = strip(arr[1])
+        right_word[right_key] = 1
+        is_contain_type = match(arr[2], /\[([^]]+)\]/, type_arr)
+        if (is_contain_type) {
+            field_type = type_arr[1]
+            right_type[right_key] = field_type
+        }
+    }
+    for (idx in right_word) {
+        print idx, right_word[idx]
+    }
+}
+END {
+    print "\nword info:\n"
+    for (idx in left_word) {
+        word_info[idx] += left_word[idx]
+    }
+    for (idx in right_word) {
+        word_info[idx] += right_word[idx]
+    }
+    for (idx in word_info) {
+        if (word_info[idx] == 1) {
+            # print idx, word_info[idx]
+            print idx " : Optional[" right_type[idx] "]"
+        }
+    }
+}
 
 ```
