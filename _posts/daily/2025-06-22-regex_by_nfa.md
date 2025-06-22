@@ -19,7 +19,7 @@ author: widehyo
 
 가장 먼저 구현한 부분은 post2nfa이다. 코드는 참고한 C언어 코드를 최대한 참고했는데, 알고리즘을 이해하기 위해 postfix에 등장하는 문자를 그림으로 치환하는 점이 선행되어야 했다. 먼저 special node는 split과 match가 있으며, match에 도달했을 때 정규표현식에 해당하는 표현을 찾은 것이고 split은 2개의 선택지로 분기하는 노드의 모양이다.
 
-![split_nodes](/assets/img/split_nodes.dot.png)
+![special_nodes](/assets/img/special_nodes.dot.png)
 ```dot
 digraph {
   fontname="Helvetica,Arial,snas-serif"
@@ -821,11 +821,10 @@ python3 regex_by_nfa.py 6 > regex6.dot && dot -T png -O regex6.dot
 $ seq 0 6 | awk '{ print "python3 regex_by_nfa.py " $0 " > regex" $0 ".dot && dot -T png -O regex" $0 ".dot" }' | bash
 ```
 
-![regex00](/assets/img/regex00.dot.png)
-![regex01](/assets/img/regex01.dot.png)
-![regex02](/assets/img/regex02.dot.png)
-![regex03](/assets/img/regex03.dot.png)
-![regex04](/assets/img/regex04.dot.png)
-![regex05](/assets/img/regex05.dot.png)
-![regex06](/assets/img/regex06.dot.png)
-![regex07](/assets/img/regex07.dot.png)
+![regex0](/assets/img/regex0.dot.png)
+![regex1](/assets/img/regex1.dot.png)
+![regex2](/assets/img/regex2.dot.png)
+![regex3](/assets/img/regex3.dot.png)
+![regex4](/assets/img/regex4.dot.png)
+![regex5](/assets/img/regex5.dot.png)
+![regex6](/assets/img/regex6.dot.png)
