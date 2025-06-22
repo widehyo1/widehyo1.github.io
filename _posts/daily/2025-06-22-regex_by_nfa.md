@@ -349,7 +349,7 @@ class StateWalker:
 
 ```
 
-한편으로 ismatch를 구현하기 위해 epsilon closure를 파악해야 했는데, character node의 split을 따라가 character node가 아닌 모든 node를 하나의 equivalence relation 취급하는 작업이 필요했다. 그 과정에서 split node가 순환참조를 발생시킬 수 있기 때문에, 각 노드 순회마다 visited set에 넣어야 했고, 이를 위하여 __hash__를 정의했다. 여기서의 node는 같은 내용을 가지고 있다고 해도 실제 메모리에 올라간 객체가 다르면 다르게 취급되므로 내장 함수 id를 사용했다.
+한편으로 ismatch를 구현하기 위해 epsilon closure를 파악해야 했는데, character node의 split을 따라가 character node가 아닌 모든 node를 하나의 equivalent relation 취급하는 작업이 필요했다. 그 과정에서 split node가 순환참조를 발생시킬 수 있기 때문에, 각 노드 순회마다 visited set에 넣어야 했고, 이를 위하여 __hash__를 정의했다. 여기서의 node는 같은 내용을 가지고 있다고 해도 실제 메모리에 올라간 객체가 다르면 다르게 취급되므로 내장 함수 id를 사용했다.
 
 ```py
 @dataclass
