@@ -19,7 +19,7 @@ author: widehyo
 
 가장 먼저 구현한 부분은 post2nfa이다. 코드는 참고한 C언어 코드를 최대한 참고했는데, 알고리즘을 이해하기 위해 postfix에서 나타나는 special character를 머리속에 그림으로 치환하는 점이 선행되어야 했다.
 
-[image](/assets/img/nfa_fragments.dot.png)
+![image](/assets/img/nfa_fragments.dot.png)
 
 ```py
 from dataclasses import dataclass
