@@ -1,7 +1,7 @@
 ---
 layout: post
-title: 프로그래밍 언어의 이해: 재귀와 반복, 기본 collection
-subtitle: programming language: recursion, iteration and basic collection
+title: 프로그래밍 언어의 이해(재귀와 반복, 기본 collection)
+subtitle: programming language(recursion, iteration and basic collection)
 tags: [programming language, recursion, iteration, collection]
 comments: true
 author: widehyo
@@ -10,13 +10,13 @@ author: widehyo
 프로그래밍 언어의 최소 조건 중 하나는 조건문과 반복문의 존재이다. 이 중 반복문은 어셈블리 수준으로 내려가지 않는 한 크게 두 가지 중 하나의 메커니즘을 지원한다.
 첫 번째는 for문을 이용한 이터레이션(iteration)이고 다른 하나는 재귀(recursion)이다. 일반적인 경험에 비추어 볼 때, 재귀만 제공하는 언어는 보편적이라고 하기는 어렵고, 함수형 프로그래밍에 특화된 언어에서 주로 볼 수 있다. 그 중에서는 아예 문법적으로 for문이 존재하지 않는(...) 경우도 존재한다. 후술할 내용에서 반복은 repeatation, 반복자체를 의미하고 반복을 구현하기 위한 방법으로써의 반복은 이터레이션(iteration)으로 표기하되, 두 용어가 명시적으로 구분될 필요가 있는 경우에는 영문표기를 병기한다.
 
-논의를 더 전개하기 전에, 이터레이션과 재귀의 구현에 대해서 생각해보자. <summary>저수준으로 내려가면 결국 재귀도, 이터레이션도 state machine으로 구현된다. 단, 재귀는 jmp와 goto문으로 이터레이션은 내부 state값을 이용한다.<details>
+논의를 더 전개하기 전에, 이터레이션과 재귀의 구현에 대해서 생각해보자. 저수준으로 내려가면 결국 재귀도, 이터레이션도 state machine으로 구현된다. 단, 재귀는 jmp와 goto문으로 이터레이션은 내부 state값을 이용한다.<details>
 이해를 돕기 위하여 어셈블리에서 반복(repeatation)을 구현한 방법을 state machine으로 이해해보자.
 필자가 생각할 수 있는 가장 저수준 단계인 언어인 어셈블리에서는 반복을 구현하기 위해 두 가지 방법을 이용한다.
 첫 번째는 goto와 label을 이용하는 방법이다. 프로그램 코드에 특정 위치에 이름을 붙이고(label) 주로 두 값을 비교(cmp 명령문)하여 컨트롤 레지스터(ZF: zero flag)에 값을 설정하고 해당 플래그에 기반하여 goto문으로 분기처리(jmp 계열 명령문)하는 방법이다.
 두 번째는 loop {label}를 이용한 편의구문이다. 어셈블리는 특정 횟수만큼 반복하기 위해 ecx 레지스터에 반복할 카운트를 넣어놓고 아래에 label을 설정한 다음 loop {label} 형태의 instruction을 작성한다. 그러면 라벨부터 loop 까지의 블럭이 반복되며, 한 번 반복될 때마다 ecx에 담긴 값을 1씩 차감하고 해당 값이 0이되면 반복을 종료하는 식으로 동작한다.
 반복(repeatation) 구현의 가장 초기라고 할 수 있는 위의 두 형태는 각각 state machine으로 볼 수 있다. 반복(repeatation)을 위해 jmp와 label을 이용하는 첫 번째의 경우 조건처리 후 빠져나오는 역할을 하는 instruction이 존재하기 마련이며(없다면 무한루프에 빠질테니까) 이때 비교하는 값을 state로 가지는 state machine으로 볼 수 있다. ecx의 값을 이용하는 두 번째 경우도 ecx의 값을 state로 가지는 state machine으로 취급할 수 있다.</details>
-</summary>
+
 이를 반복과 재귀의 관점에서 바라보면 jmp와 goto문을 이용한 방법은 재귀에 더 가깝고, 내부 state값을 이용한 방법은 c언어에서의 가장 기초적인 for문인 `for(int i = 0; i < n; i++) { /* block */ }`과 가깝다. 둘 모두 내부적으로 state machine을 이용한다면 왜 반복과 재귀가 그렇게 다른 모습으로 나타나는지 궁금할 수도 있다. 이유를 이해하기 위해서는 조금만 더 기다려보자. 약술하자면, 재귀는 보통 function call을 이용하기 때문에 사용되는 상황과 저수준에서의 동작이 많이 달라지기 때문이다.
 
 반복의 구현으로써의 이터레이션과 재귀를 더 논의하기 전에 실제 프로그래밍 상황에서 반복이 필요한 경우를 잘 생각해보자. 구구단을 구현하거나 `*`을 이용해 삼각형을 출력하는 경우가 아니라면 일반적인 상황에서 반복이 필요한 경우는 collection을 기반한다. 특정 collection에 해당하는 변수를 순회하면서 반복하거나 DB에서 fetch한 rows를 기반으로 반복하거나, 아니면 파일시스템의 특정 path이하의 file 목록을 대상으로 반복하는 경우가 일반적이다. 이런 경우 실제 반복과정에서 반복시 변화하는 counter의 값이 중요한 경우보다 해당 counter값을 이용해 참조하는 collection의 element가 더 중요한 경우가 압도적으로 많다. 물론 예외도 있는데, 여러 배열을 한꺼번에 순회하고 싶은 경우나 순서가 중요한 정렬의 경우가 그러하다. 그러나 해당하는 경우는 고급 언어로 갈수록 원했던 바로 그 기능을 언어차원에서 제공하기 시작하고, 개발자는 그 방법만 정의하여 넘기는 형태의 방식이 점점 많아지게 된다. 그러므로 이후 내용에서 다루는 반복은 collection에 기반한, 해당 collection을 순회하는 반복을 주 대상으로 한다.
