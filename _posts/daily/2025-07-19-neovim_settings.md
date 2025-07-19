@@ -21,7 +21,7 @@ author: widehyo
 4. buf_dict가 수가 1이상이면 각 path를 popup_menu에 보여주고 선택시 선택한 메뉴의 번호(`result`)를 callback(`LoadBuffer`)으로 받아 buf_dict용 인덱스로 변환하고(vim의 dictionary는 0-based, popup_menu의 callback에 전달되는 `result`는 1-based) 해당하는 아이템의 bufnr을 이용하여 버퍼 이동(`execute 'buffer! ' . target_buffer.bufnr`)
 5. 만약 search_text가 주어진다면 popup menu에서 보여지는 path에서 해당하는 search_text가 matching되는 buffer정보만 필터링해서 조회
 
-`/home/widehyo/.vimrc`
+`~/.vimrc`
 ```vim
 " load custom script
 source ~/.vim/util/common.vim
@@ -32,7 +32,7 @@ nnoremap <leader><leader>s :BufferMenu
 ```
 
 
-`/home/widehyo/.vim/util/common.vim`
+`~/.vim/util/common.vim`
 ```vim
 function! BufferMenu(search_text = '')
   " show loaded buffers on popup menu and open selected buffer
@@ -71,7 +71,7 @@ endfunction
 lua에서는 map, filter를 언어차원에서 제공하지 않으므로, util 함수를 먼저 만든다.
 
 ```lua
--- /home/widehyo/.config/nvim/lua/util/lua.lua
+-- ~/.config/nvim/lua/util/lua.lua
 local M = {}
 
 function M.filter(tbl, predicate)
@@ -130,7 +130,7 @@ return M
 단, 이렇게 하면 코드를 python에서의 map, filter처럼 사용해야 하므로, 코드가 지저분해진다. 물론, lua는 coroutine을 이용한 generator를 만들수도 있지만 python에 비해 정의하고 사용하는데 큰 공수가 들어가므로, java의 method chaining처럼 사용할 수 있는 방안을 구상하여 사용했다. 이런 식으로 디폴트 동작을 바꾸는 방법을 사용할 경우 lua의 metatable을 이용하면 된다. 접근방식만 보면 javascript의 prototype에 새로운 메서드를 추가하는 것과 유사하다.
 
 ```lua
--- /home/widehyo/.config/nvim/lua/util/chain.lua
+-- ~/.config/nvim/lua/util/chain.lua
 local M  = {}
 
 local Chain = {}
@@ -222,7 +222,7 @@ neovim에서 제공하는 마음에 드는 기능 중 하나인 floating window�
   - 초기에는 lines에 content를 담은 배열만 전달하도록 설계했으나, object의 list 중에 표출할 field를 설정하는 방식으로 동작하는 것이 더 유연하고, 무엇보다 기존 vimscript의 popup_menu가 `text` 필드를 이용하여 이미 그런식으로 동작하므로 field 를 추가하여 lines가 table인 경우 각 element의 field 를 이용하여 content를 구성하도록 변경했다.
 - add_floating_window_callback
   - floating window를 띄우는 것과 그 동작을 제어하는 것은 다른 메서드에 있어야 재사용성이 높아질 것이라는 생각으로 만든 메서드
-  - 기본 동작은 엔터키 입력시 버퍼를 닫는 기능을 추가한다. (floating window를 popup menu로 사용하는 workflow를 고려하는 메서드
+  - 기본 동작은 엔터키 입력시 버퍼를 닫는 기능을 추가한다. (floating window를 popup menu로 사용하는 workflow를 고려하는 메서드)
   - 초기에는 pre_callback만 넣어두었으나 이후 floating 윈도우가 닫힌 이후에 동작을 추가할 필요성을 느껴 post_callback 함수도 추가했다.
     - pre_callback에서는 floating window가 열려있는 상태에서 `vim.api.nvim_get_current_line()`나 `vim.fn.line('.')` 로 커서가 위치한 라인넘버 / 라인 내용에 접근할 필요가 있었고
     - post_callback에서는 `vim.api.nvim_win_close(win, true)`로 floating window가 닫힌 시점에서 동작을 제어하기 위해 추가했다.
@@ -240,7 +240,7 @@ neovim에서 제공하는 마음에 드는 기능 중 하나인 floating window�
     - pre_callback에서 선택지를 선택하지 않고 post_callback만 호출하는 경우는 고려되어있지 않은데, 그럴 만한 경우가 생기면 그 때 다시 수정하기로 결정
 
 ```lua
--- /home/widehyo/.config/nvim/lua/util/buf.lua
+-- ~/.config/nvim/lua/util/buf.lua
 
 local M = {}
 
@@ -284,7 +284,7 @@ function M.floating_window(lines, field)
 end
 
 function M.add_floating_window_callback(win, buf, pre_callback, post_callback)
-  local selction = nil
+  local item = nil
   vim.keymap.set('n', '<CR>', function()
     if pre_callback then
       item = pre_callback()
@@ -303,7 +303,7 @@ return M
 메인로직은 다음과 같다.
 
 ```lua
--- /home/widehyo/.config/nvim/lua/common/init.lua
+-- ~/.config/nvim/lua/common/init.lua
 
 -- Buffer menu popup
 function M.buffer_menu(search_text)
