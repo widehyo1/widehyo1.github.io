@@ -7,364 +7,161 @@ comments: true
 author: widehyo
 ---
 
-## 07/19
-### buffer menu 포팅
-#### 기존 vimscript
+## 반복은 프로그래밍 언어의 기본 조건이다
 
-기존 vimscript 버전의 경우 vim8부터 지원된 popup_menu를 이용하여 현재 열려있는 버퍼 목록을 조회하고, 선택하여 불러오는 방식으로 구현했었다. 단, vimscript에서는 closure가 지원되지 않아, 이 작업을 하는 데 공통으로 활용해야 하는 변수는 script-scoped 변수인 s:buf_dict를 사용해야 했던 점이 아쉬웠다.
+프로그래밍 언어의 최소 조건 중 하나는 조건문과 반복문의 존재이다.  
+이 중 반복문은 어셈블리 수준으로 내려가지 않는 한, 크게 두 가지 메커니즘 중 하나를 지원한다.
 
-자세한 동작방식은 다음과 같다.
-1. getbufinfo() API를 통해 session에서 buffer 정보 조회
-2. 이렇게 얻은 각 bufinfo는 너무 많은 정보를 담고 있으므로, popup에서 보여줄 텍스트와 해당하는 버퍼로 이동하기 위한 buffer number만 추출하여 buf_dict로 저장(이 과정에서 path를 보기 좋게 보여주기 위해 expand(":.:~") 적용
-  - expand(path, "format_str")은 path를 변형하는데 자주 사용되며, `:.`은 :pwd 기준으로 찾아갈 수 있다면 해당 상대경로를, `:~`는 홈 디렉터리를 기준으로 찾아갈 수 있다면 absoulte path 대신 ~를 포함한 경로로 변환해 주는 modifier다.
-3. buf_dict의 수가 0이면 warning popup을 띄우고 바로 닫음
-4. buf_dict가 수가 1이상이면 각 path를 popup_menu에 보여주고 선택시 선택한 메뉴의 번호(`result`)를 callback(`LoadBuffer`)으로 받아 buf_dict용 인덱스로 변환하고(vim의 dictionary는 0-based, popup_menu의 callback에 전달되는 `result`는 1-based) 해당하는 아이템의 bufnr을 이용하여 버퍼 이동(`execute 'buffer! ' . target_buffer.bufnr`)
-5. 만약 search_text가 주어진다면 popup menu에서 보여지는 path에서 해당하는 search_text가 matching되는 buffer정보만 필터링해서 조회
+- 첫 번째는 `for`문을 이용한 **반복(iteration)**
+- 두 번째는 **재귀(recursion)**
 
-`~/.vimrc`
-```vim
-" load custom script
-source ~/.vim/util/common.vim
+일반적인 경험에 비추어 볼 때, **재귀만 제공하는 언어는 보편적이라고 하긴 어렵고**, 함수형 프로그래밍에 특화된 언어에서 주로 볼 수 있다. 그 중에서는 **아예 문법적으로 `for`문이 존재하지 않는(...) 경우도 존재**한다.
 
-nnoremap <silent> <leader><leader><leader> :call BufferMenu()<CR>
-command -nargs=1 BufferMenu :call BufferMenu(<f-args>)
-nnoremap <leader><leader>s :BufferMenu 
-```
+> 이 글에서는 "반복"을 repeatation(반복 자체)으로, 반복을 구현하기 위한 방법으로서의 반복은 iteration으로 표기한다.  
+> 두 용어가 명시적으로 구분될 필요가 있는 경우에는 영문 표기를 병기한다.
 
+---
 
-`~/.vim/util/common.vim`
-```vim
-function! BufferMenu(search_text = '')
-  " show loaded buffers on popup menu and open selected buffer
-  let s:buf_dict = map(filter(getbufinfo(), 'v:val.listed'), '#{
-        \ bufnr: v:val.bufnr,
-        \ text: fnamemodify(expand(v:val.name), ":.:~")
-        \ }')
-  if len(a:search_text)
-    " filter buf_dict text with search_text
-    call filter(s:buf_dict, 'v:val.text =~ a:search_text')
-    if len(s:buf_dict) == 0
-      let popup_config = #{
-      \   time: 3000,
-      \   cursorline: 0,
-      \   highlight: 'WarningMsg'
-      \ }
-      let empty_msg = 'there is no buffer with name matching ' . a:search_text
-      call popup_menu(empty_msg, popup_config)
-      return
-    endif
-  endif
+## 반복과 재귀의 구현: 어셈블리 관점에서 보기
 
-  let popup_config = #{
-  \   callback: 'LoadBuffer'
-  \ }
-  call popup_menu(s:buf_dict, popup_config)
-endfunction
+### 어셈블리 수준에서 반복은 어떻게 구현되는가?
 
-function! LoadBuffer(id, result)
-  let target_buffer = s:buf_dict[a:result - 1]
-  execute 'buffer! ' . target_buffer.bufnr
-endfunction
-```
+저수준의 이해를 돕기 위해, 어셈블리에서 반복을 구현한 방법을 **state machine** 관점으로 살펴보자. 필자가 생각할 수 있는 가장 저수준 단계인 언어인 어셈블리에서는 반복을 구현하기 위해 다음 두 가지 방법을 사용한다:
 
-#### neovim용 lua version
-lua에서는 map, filter를 언어차원에서 제공하지 않으므로, util 함수를 먼저 만든다.
+#### 1. `goto`와 `label`을 이용한 방법
 
-```lua
--- ~/.config/nvim/lua/util/lua.lua
-local M = {}
+- 프로그램 코드의 특정 위치에 이름을 붙이고(`label`)
+- 두 값을 비교하는 `cmp` 명령어를 통해 컨트롤 레지스터(ZF: zero flag)를 설정
+- 해당 플래그에 기반하여 `jmp` 계열 명령어로 분기 처리
 
-function M.filter(tbl, predicate)
-  local filtered = {}
-  for _, v in ipairs(tbl) do
-    if predicate(v) then
-      table.insert(filtered, v)
-    end
-  end
-  return filtered
-end
+이 방식은 조건 처리 후 빠져나오는 역할을 하는 명령어가 반드시 필요하며 (없으면 무한 루프),  
+**비교하는 값을 state로 가지는 상태 기계(state machine)**로 볼 수 있다.
 
-function M.filter_dict(tbl, predicate)
-  local filtered = {}
-  for k, v in pairs(tbl) do
-    if predicate(v) then
-      filtered[k] = v
-    end
-  end
-  return filtered
-end
+#### 2. `loop {label}`을 이용한 방식
 
-function M.map(tbl, mapper)
-  local mapped = {}
-  for _, v in ipairs(tbl) do
-    table.insert(mapped, mapper(v))
-  end
-  return mapped
-end
+- 반복할 횟수를 `ecx` 레지스터에 설정하고
+- 아래에 `label`을 붙인 다음 `loop {label}` 형태로 반복을 구성
 
-function M.map_dict(tbl, mapper)
-  local mapped = {}
-  for k, v in pairs(tbl) do
-    mapped[k] = mapper(v)
-  end
-  return mapped
-end
+이 방식은 라벨부터 loop까지의 블럭이 반복되며, `ecx`의 값이 0이 되면 종료된다.  
+**`ecx` 값을 state로 갖는 상태 기계로 이해할 수 있다.**
 
-function M.apply(tbl, mapper)
-  for i, v in ipairs(tbl) do
-    tbl[i] = mapper(v)
-  end
-  return tbl
-end
+---
 
-function M.apply_dict(tbl, mapper)
-  for k, v in pairs(tbl) do
-    tbl[k] = mapper(v)
-  end
-  return tbl
-end
+## 반복과 재귀
 
-return M
-```
+`jmp`와 `label`을 이용한 반복은 **재귀**에 가깝고,  
+`ecx` 레지스터 값을 이용한 반복은 **C언어의 기본적인 `for`문**에 가깝다.
 
-단, 이렇게 하면 코드를 python에서의 map, filter처럼 사용해야 하므로, 코드가 지저분해진다. 물론, lua는 coroutine을 이용한 generator를 만들수도 있지만 python에 비해 정의하고 사용하는데 큰 공수가 들어가므로, java의 method chaining처럼 사용할 수 있는 방안을 구상하여 사용했다. 이런 식으로 디폴트 동작을 바꾸는 방법을 사용할 경우 lua의 metatable을 이용하면 된다. 접근방식만 보면 javascript의 prototype에 새로운 메서드를 추가하는 것과 유사하다.
+하지만 어차피 반복도 재귀도 내부적으로는 상태(state)의 변화에 기반한 것이기 때문에,  
+궁극적으로는 둘 다 **state machine**으로 구현된다는 점에서 공통점을 가진다.
 
-```lua
--- ~/.config/nvim/lua/util/chain.lua
-local M  = {}
+---
 
-local Chain = {}
-Chain.__index = Chain -- 메타테이블 설정: Chain 테이블에서 메소드를 찾도록 함
+## 반복은 실제로 어디서 쓰이는가?
 
--- 생성자 함수 (새로운 Chain 인스턴스를 만듭니다)
-function Chain.new(data)
-  local self = {
-    _data = data or {} -- 내부적으로 데이터를 저장할 필드
-  }
-  return setmetatable(self, Chain)
-end
+삼각형 출력이나 구구단처럼 단순한 예제가 아니라면,  
+현실에서 반복이 필요한 상황의 대부분은 **collection 순회**이다.
 
--- 필터링 메소드
-function Chain:filter(predicate)
-  local new_data = {}
-  for _, v in ipairs(self._data) do
-    if predicate(v) then -- filter는 키와 값 모두 받도록 유연하게
-      table.insert(new_data, v)
-    end
-  end
-  self._data = new_data -- 필터링된 데이터로 업데이트
-  return self           -- 중요: self를 반환하여 체이닝 가능하게 함
-end
+- 특정 배열이나 리스트를 순회
+- DB에서 가져온 rows를 처리
+- 파일 시스템의 특정 디렉토리 이하의 파일 목록을 순회 등
 
--- 필터링 메소드
-function Chain:filter_dict(predicate)
-  local new_data = {}
-  for k, v in pairs(self._data) do
-    if predicate(v) then -- filter는 키와 값 모두 받도록 유연하게
-      new_data[k] = v
-    end
-  end
-  self._data = new_data -- 필터링된 데이터로 업데이트
-  return self           -- 중요: self를 반환하여 체이닝 가능하게 함
-end
+이런 경우, 반복 시 **카운터의 값 자체보다 그 카운터로 접근하는 요소(element)**가 훨씬 더 중요하다.  
+물론 **여러 배열을 동시에 순회하거나**, **정렬 알고리즘처럼 인덱스가 중요한 경우**는 예외다.
 
--- 매핑 메소드 (새로운 값을 생성)
-function Chain:map(mapper)
-  local new_data = {}
-  for i, v in ipairs(self._data) do
-    new_data[i] = mapper(v) -- map은 값만 받도록 단순하게
-  end
-  self._data = new_data
-  return self
-end
+그러나 현대 언어에서는 이런 특수 상황조차 언어 차원에서 iterator나 map 등의 기능으로 처리하게 되며,  
+결국 개발자가 반복의 핵심이 무엇인지 이해하는 것이 더 중요해진다.
 
--- 매핑 메소드 (새로운 값을 생성)
-function Chain:map_dict(mapper)
-  local new_data = {}
-  for k, v in pairs(self._data) do
-    new_data[k] = mapper(v) -- map은 값만 받도록 단순하게
-  end
-  self._data = new_data
-  return self
-end
+---
 
--- 적용 메소드 (데이터를 제자리에서 수정)
-function Chain:apply(mapper)
-  for i, v in ipairs(self._data) do
-    self._data[i] = mapper(v)
-  end
-  return self
-end
+## 반복의 기반이 되는 두 가지 Collection 구조
 
--- 적용 메소드 (데이터를 제자리에서 수정)
-function Chain:apply_dict(mapper)
-  for k, v in pairs(self._data) do
-    self._data[k] = mapper(v)
-  end
-  return self
-end
+현대 언어에서 반복은 주로 collection을 대상으로 수행되며, 이 collection은 대체로 두 가지 형태로 나뉜다:
 
--- 현재 데이터를 가져오는 메소드 (체이닝의 끝)
-function Chain:get()
-  return self._data
-end
+### 1. Array 기반 Collection
 
-function M.from(tbl)
-  return Chain.new(tbl)
-end
+- 각 원소가 **인접한 메모리**에 저장됨
+- O(1) 시간 복잡도로 **인덱스 접근이 가능**
+- 성능상 이점 (cache locality)
 
-return M
-```
+이러한 구조는 대부분의 언어(C, C++, Java, Python, JavaScript 등)에서 기본적인 collection으로 채택된다.  
+대표적으로 `ArrayList`, `vector`, `tuple`, `array` 등이 이에 해당된다.
 
-neovim에서 제공하는 마음에 드는 기능 중 하나인 floating window를 앞으로도 많이 사용하게 될 것 같으므로 floating window 및 buffer, window를 관리할 buf.lua도 만들었다. 간단하게 두가지 메서드를 담고 있고 각각은 다음과 같다.
-- floating_window
-  - lines와 field를 받아 floating window에 해당 content를 표출한다(최소 너비 80, 최소 높이 20) 
-  - 초기에는 lines에 content를 담은 배열만 전달하도록 설계했으나, object의 list 중에 표출할 field를 설정하는 방식으로 동작하는 것이 더 유연하고, 무엇보다 기존 vimscript의 popup_menu가 `text` 필드를 이용하여 이미 그런식으로 동작하므로 field 를 추가하여 lines가 table인 경우 각 element의 field 를 이용하여 content를 구성하도록 변경했다.
-- add_floating_window_callback
-  - floating window를 띄우는 것과 그 동작을 제어하는 것은 다른 메서드에 있어야 재사용성이 높아질 것이라는 생각으로 만든 메서드
-  - 기본 동작은 엔터키 입력시 버퍼를 닫는 기능을 추가한다. (floating window를 popup menu로 사용하는 workflow를 고려하는 메서드
-  - 초기에는 pre_callback만 넣어두었으나 이후 floating 윈도우가 닫힌 이후에 동작을 추가할 필요성을 느껴 post_callback 함수도 추가했다.
-    - pre_callback에서는 floating window가 열려있는 상태에서 `vim.api.nvim_get_current_line()`나 `vim.fn.line('.')` 로 커서가 위치한 라인넘버 / 라인 내용에 접근할 필요가 있었고
-    - post_callback에서는 `vim.api.nvim_win_close(win, true)`로 floating window가 닫힌 시점에서 동작을 제어하기 위해 추가했다.
-  - 위와 같은 내용을 고려하게 된 이유는 buffer_menu의 메커니즘이 다음과 같이 이루어지기 때문이다.
-    1. getbufinfo를 이용하여 버퍼 정보를 load하고 적당히 조작하여 floating window에 표출할 항목을 구성
-    2. 해당 항목(`buffers`)를 이용하여 floating window open
-    3. floating window 내에서 원하는 버퍼 선택 및 선택지 정보 반환 <- pre_callback
-    4. floating close
-    5. 원래 버퍼로 돌아와 반환된 선택지 정보에서 버퍼넘버를 추출하여 버퍼이동 <- post_callback
-  - 위의 메커니즘을 이용하지 않고 pre_callback만 있다면 floating window 자체를 선택한 버퍼로 변경한 후 닫게 되어 사용자는 버퍼 이동 기능을 사용할 수 없다.
-  - post_callback만 있다면 floating window에서 어떤 버퍼를 선택하였는지 정보를 전달할 수 없다. (global 변수나 register로 우회는 가능하겠으나, lua로 다시 작성하면서 마음에 들었던 점이 closure를 이용한 script variable 제거였기 때문에 논외)
-  - 기능 요구사항을 충족하고 function signature를 결정하는 데는 다음을 고려하였다.
-    - 막상 만들고보니 하나의 함수에서 모두 제어할 수 있는 편이 좋을 것 같아 pre_callback과 post_callback을 optional한 parameter로 두기로 결정
-    - 대부분의 경우 post_callback이 필요한 경우는 선택지를 선택한 경우일 것이므로 post_callback에는 pre_callback에서 선택한 item 정보를 parameter로 전달하기로 결정
-    - pre_callback에서 선택지를 선택하지 않고 post_callback만 호출하는 경우는 고려되어있지 않은데, 그럴 만한 경우가 생기면 그 때 다시 수정하기로 결정
+> 연속된 block 단위로 메모리를 읽는 CPU의 특성 덕분에 성능이 좋음  
+> 인덱스 계산은 base address + (unit size × index)로 접근
 
-```lua
--- ~/.config/nvim/lua/util/buf.lua
+### 2. Linked List 기반 Collection
 
-local M = {}
+- 각 원소가 **서로 다른 메모리에 저장**되고, next pointer로 연결됨
+- 접근 시간은 O(n)이지만, **지연성(laziness)**과 **무한 데이터 표현**에서 유리
+- 함수형 언어(Haskell, Clojure, F# 등)에서 자주 사용
 
-function M.floating_window(lines, field)
-  local max_line_width = 0
-  local contents = {}
+linked list의 강점 중 하나는 **무한 리스트를 다룰 수 있다는 것**이다.  
+실제 메모리에 모든 데이터를 올릴 필요 없이, **필요할 때마다 한 원소씩 생성**하면 된다.  
+또한 **하나의 원소(head)가 전체 리스트를 대표**할 수 있는 구조이기도 하다.
 
-  -- set content-extracting function
-  local get_content = function(line) return line end
-  if field and field ~= "" then
-    get_content = function(line) return line[field] end
-  end
+> 이 때문에 함수형 언어에서는 `x:xs`, `(cons 69 (cons 613 nil))` 같은 형태가 자연스럽다.
 
-  for _, line in ipairs(lines) do
-    local content = get_content(line)
-    table.insert(contents, content)
-    max_line_width = math.max(max_line_width, vim.fn.strwidth(content))
-  end
+---
 
-  local buf = vim.api.nvim_create_buf(false, true)
+## 이터레이션과 지연 평가
 
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, contents)
+이터레이션이 가진 강점 중 하나는 **지연 평가(lazy evaluation)**와의 궁합이다.  
+이터레이션에서는 현재 상태를 기반으로 다음 값을 정의할 수 있기 때문에,  
+**모든 데이터를 한꺼번에 메모리에 올릴 필요 없이**, 순차적으로 계산해 나갈 수 있다.
 
-  local width = math.max(max_line_width + 2, 80)
-  local height = math.max(#lines, 20)
+### 언어별 이터레이션 구현 방식 예시
 
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = 'editor',
-    width = width,
-    height = height,
-    row = math.floor((vim.o.lines - height) / 2),
-    col = math.floor((vim.o.columns - width) / 2),
-    style = 'minimal',
-    border = 'rounded',
-  })
+- Python: `__next__` 메서드
+- C++: `operator++` 오버로딩
+- JavaScript, Python, Java: `generator`, `yield` 키워드
 
-  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-  vim.cmd("setlocal cursorline")
+---
 
-  return win, buf
-end
+## 재귀의 내부 동작과 한계
 
-function M.add_floating_window_callback(win, buf, pre_callback, post_callback)
-  vim.keymap.set('n', '<CR>', function()
-    if pre_callback then
-      local item = pre_callback()
-    end
-    vim.api.nvim_win_close(win, true)
-    if post_callback then
-      post_callback(item)
-    end
-  end, { buffer = buf })
-end
+재귀는 함수가 자기 자신을 호출하는 구조로,  
+**각 호출마다 새로운 스택 프레임**이 생성된다.
 
-return M
-```
+### 재귀의 비용
 
+- 새로운 frame 생성
+- 함수의 지역변수 및 파라미터 복사
+- 메모리 할당 (stack 공간)
+- 시스템 콜을 통한 메모리 접근
 
-메인로직은 다음과 같다.
+이러한 이유로 대부분의 언어에서는 **재귀 깊이에 제한**을 둔다.
 
-```lua
--- ~/.config/nvim/lua/common/init.lua
+### 꼬리 재귀 최적화 (Tail Call Optimization)
 
--- Buffer menu popup
-function M.buffer_menu(search_text)
-  local buf_listed = function(buf) return buf.listed == 1 end
-  local bufnr_relpath = function(buf)
-    return {
-      bufnr = buf.bufnr,
-      path = vim.fn.fnamemodify(buf.name, ":.:~")
-    }
-  end
-  local search_match = function(buf) return buf.path:match(search_text) end
-  local buffers = chain.from(vim.fn.getbufinfo())
-    :filter(buf_listed)
-    :apply(bufnr_relpath)
-    :get()
+꼬리 위치(tail position)에 위치한 재귀 호출은,  
+**새로운 스택 프레임을 만들지 않고**, 기존 frame을 재사용하는 방식으로 최적화 가능하다.
 
-  if search_text and search_text ~= "" then
-    buffers = chain.from(buffers)
-      :filter(search_match)
-      :get()
-    if #buffers == 0 then
-      local empty_msg = "there is no buffer with name matching <" .. search_text .. ">"
-      local win, buf = buf_util.floating_window({empty_msg})
-      buf_util.add_floating_window_callback(win, buf)
-      return
-    end
-  end
+언어별 지원 여부:
 
-  local select_buffer = function ()
-    return buffers[vim.fn.line(".")]
-  end
+- Python: 미지원
+- Java: `Function` 등 제한적
+- Kotlin: `tailrec` 키워드
+- JavaScript: ES6 이후 일부 지원
 
-  local load_buffer = function (item)
-    vim.cmd("buffer! " .. item.bufnr)
-  end
+---
 
-  local win, buf = buf_util.floating_window(buffers, 'path')
-  buf_util.add_floating_window_callback(win, buf, select_buffer, load_buffer)
+## 재귀와 반복의 이론적 동등성
 
-end
-```
+이론적으로, **재귀와 이터레이션은 동등하다.**
 
-그리고 키 바인딩은 이렇게 해서 사용한다.
+- 반복으로 구현 가능한 모든 코드는 재귀로 구현 가능
+- 반대로 재귀로 구현된 코드도 반복으로 바꿀 수 있음
 
+따라서 재귀를 지원하지 않는 언어에서도 상태 기계를 직접 구현해 반복을 흉내낼 수 있다.  
+예를 들어:
 
-```lua
--- load scripts
-local common = require('common')
-vim.keymap.set('n', '<leader><leader><leader>', common.buffer_menu)
-vim.api.nvim_create_user_command(
-  'BufferMenu',
-  function(opts)
-    local search_text = opts.fargs[1]
-    common.buffer_menu(search_text)
-  end,
-  {
-    nargs = 1,
-    desc = "Open buffer menu with optional search text"
-  }
-)
-vim.keymap.set('n', '<leader><leader>s', ':BufferMenu ')
-```
+- 상태값 하나만 필요한 경우 → `while`문 기반 구현  
+- 복수 상태가 필요한 경우 → `stack` 기반의 순회 로직
 
+---
 
-잘 동작한다.
+## 마무리: 반복과 재귀, 그리고 구조에 대한 이해
+
+반복(repeatation)의 구현으로써의 이터레이션과 재귀, 그리고 이를 뒷받침하는 collection 구조에 대한 이해는  
+**프로그래밍 언어 자체를 이해하는 데 큰 도움이 된다.**
