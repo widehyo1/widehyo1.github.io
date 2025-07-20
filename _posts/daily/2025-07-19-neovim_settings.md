@@ -7,6 +7,120 @@ comments: true
 author: widehyo
 ---
 
+## 07/20
+### command history floating window 포팅
+
+`q:`로 볼 수 있는 preview window를 floating window에서 조작하면 좋을 것 같아서 만들어 보았다.
+
+`~/.config/nvim/init.lua`
+```lua
+vim.keymap.set('n', 'q:', common.command_menu)
+```
+
+`~/.config/nvim/lua/common/init.lua`
+```lua
+function M.command_menu(hist_size)
+  if hist_size then
+    hist_size = tonumber(hist_size)
+  else
+    hist_size = 20
+  end
+  
+  local histories = vim.fn.execute('history cmd -' .. hist_size .. ',')
+  local lines = vim.split(histories, "\n", { trimempty = true })
+  -- skip first row
+  lines = vim.list_slice(lines, 2)
+  -- extract  part
+  local extract_ = function(line)
+    for _, cmd in line:sub(2):gmatch('%s+(%d*)%s+(.+)') do
+      return cmd
+    end
+  end
+  lines = chain.from(lines)
+    :apply(extract_)
+    :get()
+  local select = function()
+    return vim.fn.line(".")
+  end
+  local execute = function(item)
+    vim.cmd(lines[item])
+  end
+
+  local win, buf = buf_util.floating_window(lines)
+  buf_util.add_floating_window_callback(win, buf, select, execute)
+end
+```
+
+floating window를 띄우는 함수에 opt를 설정이 hardcording 되어있는건 tbl_extend를 이용해 바꾸면 더 좋을 것 같다.
+`q:`처럼 커서가 맨 마지막 줄에서 시작하도록 바꾸어야 겠다.
+또한, hist_size를 조정할 수 있도록 command를 만들면 더 좋을 것 같다.
+그리고, fzf처럼 input prompt를 이용해서 검색할수 있으면 좋을 것 같다. <- 이게 아마 가장 어렵지 않을까
+
+
+### filetype 포팅
+
+filetype을 vim에서 lua로 바꾸는 것은 생각보다는 쉬웠다.
+buffer option과 iabbrev를 바꾸는 방법만 알면 되었다.
+
+`iabbrev <buffer> \begin; BEGIN {<CR><C-u>}` => `common.add_snippet("begin", "BEGIN {\n  ${1:content}\n}", b_local)`
+`setlocal tabstop=2` => `vim.bo[bufnr].tabstop = 2`
+
+예를 들면 이런 식이다.
+
+단, 특기할만 한 점은 lua snippet에서 `$`를 입력하고 싶다면 `\\$`로, `\`를 입력하고 싶다면 `\\`로 써야 한다.
+
+`~/.vim/ftplugin/awk.vim`
+```vim
+iabbrev <buffer> \begin; BEGIN {<CR><C-u>}
+iabbrev <buffer> \end; END {<CR><C-u>}
+iabbrev <buffer> \for; for (i = 1; i <= NF; i++) {}
+iabbrev <buffer> \forarr; for (idx in arr) {}
+iabbrev <buffer> \printarr; for (idx in arr) {<CR>print "idx: " idx " arr[idx]: " arr[idx]<CR>}
+iabbrev <buffer> \striparr; for (idx in arr) {<CR>arr[idx] = strip(arr[idx])<CR>}
+iabbrev <buffer> \surr; function surround_str(str, start, end) {<CR>return start str end<CR>}
+iabbrev <buffer> \surrd; "\""str"\""
+iabbrev <buffer> \surrq; "'"str"'"
+iabbrev <buffer> \surrp; "("str")"
+iabbrev <buffer> \surrs; "["str"]"
+iabbrev <buffer> \surrb; "<"str">"
+iabbrev <buffer> \surrc; "{"str"}"
+iabbrev <buffer> \split; split(str, arr, sep)
+iabbrev <buffer> \strip; function strip(str) {<CR>gsub(/^\s+\|\s+$/, "", str)<CR>return str<CR>}
+iabbrev <buffer> \join; function join(arr, sep,    acc) {<CR>acc = arr[1]<CR>for (i = 2; i <= length(arr); i++) {<CR>acc = acc sep arr[i]<CR>}<CR>return acc<CR>}
+iabbrev <buffer> \gsub; gsub(regex, replace, str)
+iabbrev <buffer> \rindex; function rindex(hay, needle,    arr, lastToken) {<CR>lastToken = arr[split(hay, arr, needle)]<CR>return length(hay) - length(needle) - length(lastToken) + 1<CR>}
+iabbrev \include; @include "common"
+
+setlocal tabstop=2
+setlocal shiftwidth=2
+setlocal softtabstop=2
+vnoremap <buffer> gcc :s/^/# /<CR>
+```
+
+`~/.config/nvim/ftplugin/awk.lua`
+```lua
+local common = require('common')
+local b_local = { buffer = 0 }
+
+local bufnr = vim.api.nvim_get_current_buf()
+
+vim.bo[bufnr].tabstop = 2
+vim.bo[bufnr].shiftwidth = 2
+vim.bo[bufnr].softtabstop = 2
+
+common.add_snippet("begin", "BEGIN {\n  ${1:content}\n}", b_local)
+common.add_snippet("end", "END {\n  ${1:content}\n}", b_local)
+common.add_snippet("for", "for (${1:i = 1; i <= NF; i++}) {}", b_local)
+common.add_snippet("forarr", 'for (idx in arr) { print "idx: " idx " arr[idx]: " arr[idx] }', b_local)
+common.add_snippet("split", "split(${1:str}, ${2:arr}, ${3:sep})", b_local)
+common.add_snippet("strip", 'function strip(str) {\n  gsub(/^\\s|\\s\\$/, "", str)\n  return str\n}', b_local)
+common.add_snippet("gsub", "gsub(${1:regex}, ${2:replace}, ${3:str})", b_local)
+common.add_snippet("rindex", "function rindex(hay, needle,    arr, lastToken) {\n  lastToken = arr[split(hay, arr, needle)]\n  return length(hay) - length(needle) - length(lastToken) + 1\n}", b_local)
+common.add_snippet("include", '@include "common"', b_local)
+```
+
+
+
 ## 07/19
 ### buffer menu 포팅
 #### 기존 vimscript
