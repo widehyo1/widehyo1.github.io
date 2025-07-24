@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+      xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+<!-- created with Free Online Sitemap Generator www.xml-sitemaps.com -->
+
+
+<url>
+  <loc>https://widehyo1.github.io/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>1.00</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-07-24-algorithms/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/tags/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-07-19-neovim_settings/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-07-06-recursion_iteration/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-06-26-awk_functool_partial/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-06-23-awk_library/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-06-22-regex_by_nfa/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-06-21-applied_generator/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-02-26-awk_scripts/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-02-15-column_substitution_with_awk/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-02-05-haskell_memo_function/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/page2/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://widehyo1.github.io/2025-02-02-understanding_functor/</loc>
+  <lastmod>2025-07-23T15:06:45+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+
+
+</urlset>
