@@ -1,7 +1,7 @@
 ---
 layout: post
-title: 네오빔 환경설정 구성기록
-subtitle: neovim configs
+title: 네오빔 환경설정 구성기록(1)
+subtitle: BufferMenu, chain.lua, ftplugin
 tags: [neovim]
 comments: true
 author: widehyo
