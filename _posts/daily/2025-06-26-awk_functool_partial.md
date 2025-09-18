@@ -34,14 +34,14 @@ author: widehyo
 
 5번과 6번은 생각보다 극복 난이도가 낮았는데, C언어의 call by reference 방식으로 우회하면 된다. C언어에서 array를 sort하기 위해 배열의 포인터를 함수에 넘기고 안에서 swap한 것과 근본적으로 같은 방식이다. 한편, multi return을 위해 새로운 배열을 만들어 return하고 싶을 때는 해당 배열을 parameter로 넘기고 함수 본문 시작시 delete 문을 이용해 우연히 같은 이름을 사용하는 global variable 문제를 방지하였다. 그리고 이 방법은 awk의 기본 함수인 split("text", "array", "separator")에서 자연스럽게 사용하는 방법이기 때문에 awk의 idiom과도 부합한다.
 
-7번은 gawk의 힘을 빌려 @fn 을 이용한다. man awk를 읽다가 @fn을 보고 이거 잘하면 함수형 프로그래밍 할 수 있겠는데 라는 생각이 든 근본적인 모티베이션을 얻었다. 하지만 10번의 제약사항에 의하여 런타임에서 dynamic하게 함수/매개변수에 접근할 수 없었기 때문에 debugger가 참조하는 프레임 객체와 비슷한 것 중 functools.partial에서 필요한 정보만 담은 global variable을 직접 만들어 구현했다.
+7번은 gawk의 힘을 빌려 @fn 을 이용한다. man awk를 읽다가 @fn을 보고 이거 잘하면 함수형 프로그래밍 할 수 있겠는데 라는 생각이 이 글의 근본적인 모티베이션이 되었다. 하지만 10번의 제약사항에 의하여 런타임에서 dynamic하게 함수/매개변수에 접근할 수 없었기 때문에 debugger가 참조하는 프레임 객체와 비슷한 것 중 functools.partial에서 필요한 정보만 담은 global variable을 직접 만들어 구현했다.
 
 가장 먼저 진행한 부분은 함수 signature를 저장하는 방법을 찾는 것이었다. functools.partial과 같은 함수는 parameter의 위치 및 key를 이용하여 default parameter를 binding할 수 있었기 때문에 해당하는 정보를 저장해야 했다. 결론만 말하자면 다음과 같은 함수가 있을 때
 ```
 function sample(a, b, c) { ... }
 ```
 [(a, 1), (b, 2), (c, 3)] 과 같은 형태로 함수의 signature가 저장되기를 원했다.
-하지만 array의 value는 array가 될 수 없기에, [(a, 1), (b, 2), (c, 3)]의 string representation을 다음과 같이 저장했다.
+하지만 array는 element로 array를 가질 수 없기에(array의 원소에 array를 할당하려 하면 syntax error), [(a, 1), (b, 2), (c, 3)]의 string representation을 다음과 같이 저장했다.
 ```
 SSEP = "\035"
 "1" SUBSEP "a" SSEP "2" SUBSEP "b" SSEP "3" SUBSEP "c"
@@ -51,7 +51,7 @@ SSEP = "\035"
 ```py
 FUNCSIG["sample"] = "1\034a\0352\034b\0353\034c"
 ```
-그리고 실제로 구조가 필요할 때는 SSEP과 SUBSEP으로 split하여 {"a":1,"b":2,"c":3} 과 같은 형태로 사용한다.
+그리고 실제로 사용할 때는 SSEP과 SUBSEP으로 split하여(deserialize하여) {"a":1,"b":2,"c":3} 과 같은 형태로 사용한다.
 
 ```awk
 # save function signature to global variable FUNCSIG
@@ -71,7 +71,37 @@ function bindPosition(array,    acc) {
 ```
 
 
-두번째는 binding된 함수를 만드는 함수이다. 매개변수는 argument를 binding하는 정보를 담고 있는 array(bindings)와 원본 함수명(fnname) 그리고 binding한 함수명(key)으로 구성된다. 함수명을 통한 원본함수는 gawk에서 @fn 문법으로 가능하기 때문에 어떤 함수에 어떤 parameter가 바인딩 되었는지를 정보로 전달하고 binding된 새로운 함수를 key로 global variable BINDING이 가지고 있다가 call 함수에 의해 해당 정보를 찾아 reconstruction을 통해 호출하는 방법이다. 최대한의 유연성을 확보하기 위하여 bindings는 associative array로 설계했고, 위에서 저장한 function signature와 실제 실행 책임을 가진 함수 call에서 호출할 args와 함께 사용된다.
+두번째로는 진행한 함수는 binding된 함수를 만드는 함수이다. functools의 partial이 하는 역할과 같다고 보면 된다.
+
+`원본함수명`(fnname)과 `default parameter의 정보`(bindings)를 받아 원본 함수의
+parameter 중 명시적으로 호출하지 않은 매개변수는 bindings로 미리 정의한 매개변수를
+사용하는 함수의 이름을 `key`로 등록하는 동작을 awk용으로 바꾼 것이다.
+
+```py
+>>> from functools import partial
+>>> def fnname(a, b):
+...     print(f"a: {a}, b: {b}")
+... 
+>>> key = partial(fnname, b=3)
+>>> key(1)
+a: 1, b: 3
+```
+
+```awk
+function fnname(a, b) {
+    printf "a: %s, b: %s", a, b
+}
+# 정의부
+key = "partial_fn"
+bind(key, "fnname", "b" SUBSEP "3") # partial_fn = partial(fnname, b=3)과 같은 역할
+
+# 사용부
+call(key, "a" SUBSEP "1") # partial_fn(a=1)과 같은 역할 == @key(a=1)과 같은 역할
+```
+
+매개변수는 argument를 binding하는 정보를 담고 있는 array(bindings)와 원본 함수명(fnname) 그리고 binding한 함수명(key)으로 구성된다.
+
+함수명을 통한 함수 간접호출은 gawk에서 @fn 문법으로 가능하기 때문에, 어떤 함수에 어떤 parameter가 바인딩 되었는지를 정보로 전달하고 binding된 새로운 함수를 key로 global variable BINDING이 가지고 있다가 call 함수에 의해 해당 정보를 찾아 reconstruction을 통해 호출하는 방법이다. 최대한의 유연성을 확보하기 위하여 bindings는 associative array로 설계했고, 위에서 저장한 function signature와 실제 실행 책임을 가진 함수 call에서 호출할 args와 함께 사용된다.
 
 binding한 정보는 `[원본함수명] [(매개변수1, 값1), (매개변수2, 값2), ...]` 와 같은 형태로 저장된다. 물론, awk에는 string과 number만 primitive type으로 가지므로 string representation 형태로 저장한다.
 
