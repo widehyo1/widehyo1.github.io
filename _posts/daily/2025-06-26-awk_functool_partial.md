@@ -1,6 +1,6 @@
 ---
 layout: post
-title: functools.partion 구현기 (using awk)
+title: functools.partial 구현기 (using awk)
 subtitle: implementation of functools.partial with awk
 tags: [awk, functional-programming]
 comments: true
@@ -151,7 +151,7 @@ function buildParameter(key, args, params) {
 }
 ```
 
-partion은 헬퍼함수이다. separator를 기준으로 전후를 잘라낸다. 역시 multi return이 필요하기 때문에 headtail 매개변수 배열을 이용한다.
+partition은 헬퍼함수이다. separator를 기준으로 전후를 잘라낸다. 역시 multi return이 필요하기 때문에 headtail 매개변수 배열을 이용한다.
 
 ```awk
 function partition(str, sep, headtail) {
