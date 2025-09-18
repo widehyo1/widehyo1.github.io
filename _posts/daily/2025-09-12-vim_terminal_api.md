@@ -42,11 +42,10 @@ endfunction
 
 ## terminal-api
 - vim의 terminal buffer에서 terminal-api를 이용하여 해당 vim 프로세스에 load된 vimscript
-함수를 호출 할 수 있다. `:h terminal-api`
-  - 사용하는 방법은 다음과 같다.
-    1. `:term`을 이용하여 terminal buffer를 연다
-    2. `$ printf '\e]51;["call","$VIMFUNC","$ARGLIST"]\x07'`를 이용해 vim function을
-    호출한다. 호출 예:
+함수를 호출 할 수 있다. `:h terminal-api`. 사용하는 방법은 다음과 같다.
+
+1. `:term`을 이용하여 terminal buffer를 연다
+2. `$ printf '\e]51;["call","$VIMFUNC","$ARGLIST"]\x07'`를 이용해 vim function을 호출한다. 호출 예:
 ```bash
 $ printf '\e]51;["call","Tapi_test",[]]\007'
 $ printf '\e]51;["call","Tapi_test",["hello", 123]]\007'
