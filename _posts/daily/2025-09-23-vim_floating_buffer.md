@@ -151,11 +151,29 @@ call OpenPopup()
 `common.vim`
 
 ```vim
+function! OpenMessagePopup()
+  let pop_width = float2nr(&columns * 0.8)
+  let pop_height = float2nr(&lines * 0.8)
+  let lines = split(execute('message', 'silent'), '\n')
+  let popup_config = #{
+        \ scrollbar: 1,
+        \ maxheight: pop_height,
+        \ minheight: pop_height,
+        \ maxwidth: pop_width,
+        \ minwidth: pop_width,
+        \ filter: 'PopupFilter'
+        \ }
+
+  let winid = popup_menu(lines, popup_config)
+  call win_execute(winid, 'normal! G')
+  call win_execute(winid, 'normal! \<c-b>')
+endfunction
+
 function! PopupFilter(winid, key) abort
     if a:key ==# "j"
-        call win_execute(a:winid, "normal! \<c-e>")
+        call win_execute(a:winid, "normal! j")
     elseif a:key ==# "k"
-        call win_execute(a:winid, "normal! \<c-y>")
+        call win_execute(a:winid, "normal! k")
     elseif a:key ==# "\<c-d>"
         call win_execute(a:winid, "normal! \<c-d>")
     elseif a:key ==# "\<c-u>"
@@ -168,6 +186,12 @@ function! PopupFilter(winid, key) abort
         call win_execute(a:winid, "normal! \<c-f>")
     elseif a:key ==# "u"
         call win_execute(a:winid, "normal! \<c-b>")
+    elseif a:key ==# "v"
+        call win_execute(a:winid, "normal! v")
+    elseif a:key ==# "V"
+        call win_execute(a:winid, "normal! V")
+    elseif a:key ==# "y"
+        call win_execute(a:winid, "normal! y")
     elseif a:key ==# "G"
         call win_execute(a:winid, "normal! G")
     elseif a:key ==# "g"
@@ -178,26 +202,6 @@ function! PopupFilter(winid, key) abort
         return v:false
     endif
     return v:true
-endfunction
-
-function! OpenMessagePopup()
-  let pop_width = float2nr(&columns * 0.8)
-  let pop_height = float2nr(&lines * 0.8)
-  let lines = split(execute('message', 'silent'), '\n')
-  let popup_config = #{
-        \ scrollbar: 1,
-        \ maxheight: pop_height,
-        \ minheight: pop_height,
-        \ maxwidth: pop_width,
-        \ minwidth: pop_width,
-        \ filter: 'PopupFilter',
-        \ filtermode: 'n'
-        \ }
-
-  let winid = popup_menu(lines, popup_config)
-  echomsg winid
-  call win_execute(winid, 'normal! G')
-  call win_execute(winid, 'normal! \<c-b>')
 endfunction
 ```
 
