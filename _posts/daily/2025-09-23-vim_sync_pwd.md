@@ -97,6 +97,7 @@ function! SyncTerminalPwd()
 endfunction
 ```
   - 동작을 확인했으므로, 해당 함수를 `TerminalOpen` 이벤트 `autocmd`에 `setlocal`을 이용해 키맵을 설정하자
+
 ```vim
 function! SetupTerminalOpen() abort
   " <leader>cd : osc7_dir으로 pwd 설정
