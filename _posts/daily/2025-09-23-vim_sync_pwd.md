@@ -121,6 +121,7 @@ augroup END
   - pwd는 `getcwd`로 얻을 수 있고, 터미널 버퍼에 해당 path로 cd하는 명령만 추가적으로 보내주면 된다
   - 터미널 버퍼에 키를 보낼 때는 `feedkeys`를 활용한다
     - 단, 이미 열려있는 터미널 버퍼에 명령어가 입력되어 있는 경우가 있으므로 먼저 내용을 먼저 지워준다
+
 ```vim
 function! OpenTerminal()
   for listed_buffer in filter(getbufinfo(), 'v:val.listed')
@@ -139,6 +140,7 @@ function! OpenTerminal()
 
 endfunction
 ```
+
   - 물론 키바인딩도 추가한다
     - 기존에 오랫동안 `nnoremap <C-D> :sh<CR>`를 이용하여 vim->내장 셸, 내장 셸 -> vim을 토글하는 키로 `<C-D>`키를 사용해 왔으므로, 터미널 버퍼로 같은 동작을 하는 키를 `<C-D>`로 하여 대체한다
       - `nnoremap <C-D> :call OpenTerminal()<CR>`
